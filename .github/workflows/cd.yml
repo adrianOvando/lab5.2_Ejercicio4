@@ -32,9 +32,20 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/lab5-2-ejercicio4:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/lab5-2-ejercicio4:latest
 
+      - name: Escaneo de vulnerabilidades con Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/lab5-2-ejercicio4:${{ github.sha }}
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Desplegar en servidor remoto
         uses: appleboy/ssh-action@v1.0.0
@@ -45,7 +56,7 @@ jobs:
           script: |
             IMAGE="${{ secrets.DOCKER_USERNAME }}/lab5-2-ejercicio4:latest"
             
-            # 1. Desplegar la nueva imagen en un puerto alterno (3001) para validación
+            # 1. Desplegar la nueva imagen en un puerto alterno (3001) para validacion
             docker pull $IMAGE
             docker run -d \
               --name lab5-2-ejercicio4-new \
@@ -66,20 +77,20 @@ jobs:
               docker stop lab5-2-ejercicio4 || true
               docker rm lab5-2-ejercicio4 || true
               
-              # 5. Exponer el nuevo contenedor en el puerto público 80
+              # 5. Exponer el nuevo contenedor en el puerto publico 80
               docker run -d \
                 --name lab5-2-ejercicio4 \
                 --restart unless-stopped \
                 -p 80:3000 \
                 $IMAGE
               
-              # 6. Limpiar el contenedor de validación
+              # 6. Limpiar el contenedor de validacion
               docker rm -f lab5-2-ejercicio4-new || true
             else
-              echo "Health check FALLIDO. Cancelando despliegue y manteniendo versión anterior."
+              echo "Health check FALLIDO. Cancelando despliegue y manteniendo version anterior."
               docker rm -f lab5-2-ejercicio4-new || true
               exit 1
             fi
             
-            # 7. Limpieza de imágenes y contenedores huérfanos
+            # 7. Limpieza de imagenes y contenedores huerfanos
             docker system prune -f
